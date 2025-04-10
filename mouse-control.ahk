@@ -7,6 +7,9 @@ InstallKeybdHook
 ; Astrid Ivy
 ; 2019-04-14
 
+; TODO сделать красивым
+modeModal := Gui(, "Mode")
+
 global INSERT_MODE := false
 global INSERT_QUICK := false
 global NORMAL_MODE := false
@@ -19,9 +22,10 @@ global MOUSE_RESISTANCE := 0.982
 global VELOCITY_X := 0
 global VELOCITY_Y := 0
 
-global POP_UP := false
-
 global DRAGGING := false
+
+; Insert Mode by default
+EnterInsertMode()
 
 Accelerate(velocity, pos, neg) {
     if (pos == 0 && neg == 0) {
@@ -38,45 +42,33 @@ Accelerate(velocity, pos, neg) {
 }
 
 MoveCursor() {
-    LEFT := 0
-    DOWN := 0
-    UP := 0
-    RIGHT := 0
+    LEFT := WASD
+        ? 0 - GetKeyState("SC01E", "P") : 0 - GetKeyState("SC023", "P")
+    DOWN := WASD
+        ? 0 + GetKeyState("SC01F", "P") : 0 + GetKeyState("SC024", "P")
+    UP := WASD
+        ? 0 - GetKeyState("SC011", "P") : 0 - GetKeyState("SC025", "P")
+    RIGHT := WASD
+        ? 0 + GetKeyState("SC020", "P") : 0 + GetKeyState("SC026", "P")
 
-    LEFT := LEFT - GetKeyState("h", "P")
-    DOWN := DOWN + GetKeyState("j", "P")
-    UP := UP - GetKeyState("k", "P")
-    RIGHT := RIGHT + GetKeyState("l", "P")
-
-    if (WASD) {
-        UP := UP - GetKeyState("w", "P")
-        LEFT := LEFT - GetKeyState("a", "P")
-        DOWN := DOWN + GetKeyState("s", "P")
-        RIGHT := RIGHT + GetKeyState("d", "P")
+    if (NORMAL_QUICK && !GetKeyState("Capslock", "P")) {
+        EnterInsertMode()
     }
 
-    if (NORMAL_QUICK) {
-        caps_down := GetKeyState("Capslock", "P")
+    if (!NORMAL_MODE) {
+        global VELOCITY_X := 0
+        global VELOCITY_Y := 0
 
-        if (caps_down == 0) {
-            EnterInsertMode()
-        }
+        SetTimer(, 0)
     }
 
-    if (NORMAL_MODE == false) {
-        VELOCITY_X := 0
-        VELOCITY_Y := 0
-
-        SetTimer(, Off)
-    }
-
-    VELOCITY_X := Accelerate(VELOCITY_X, LEFT, RIGHT)
-    VELOCITY_Y := Accelerate(VELOCITY_Y, UP, DOWN)
+    global VELOCITY_X := Accelerate(VELOCITY_X, LEFT, RIGHT)
+    global VELOCITY_Y := Accelerate(VELOCITY_Y, UP, DOWN)
 
     ; enable per-monitor DPI awareness
     RestoreDPI := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
 
-    MouseMove(%VELOCITY_X%, %VELOCITY_Y%, 0, R)
+    MouseMove(VELOCITY_X, VELOCITY_Y, 0, "R")
 
     ;(humble beginnings)
     ;MsgBox, %NORMAL_MODE%
@@ -86,66 +78,40 @@ MoveCursor() {
     ;MsgBox, %msg2%
 }
 
-EnterNormalMode(quick := false) {
-    ;MsgBox, "Welcome to Normal Mode"
-    NORMAL_QUICK := quick
-
+EnterNormalMode(quick := false, mode := "vim") {
+    global NORMAL_QUICK := quick
+    global WASD := mode == "vim" ? false : true
     msg := "NORMAL"
 
-    if (WASD == false) {
-        msg := msg . " (VIM)"
-    }
+    msg := mode == "vim"
+        ? msg . " (VIM)" : msg . " (WASD)"
+    msg := quick
+        ? msg . " (QUICK)" : msg . ""
 
-    if (quick) {
-        msg := msg . " (QUICK)"
-    }
-
+    ; TODO если удерживать то будет дублировать
     ShowModePopup(msg)
 
     if (NORMAL_MODE) {
         return
     }
 
-    NORMAL_MODE := true
-    INSERT_MODE := false
-    INSERT_QUICK := false
+    global NORMAL_MODE := true
+    global INSERT_MODE := false
+    global INSERT_QUICK := false
 
     SetTimer(MoveCursor, 16)
 }
 
-EnterWASDMode(quick := false) {
-    msg := "NORMAL"
-
-    if (quick) {
-        msg := msg . " (QUICK)"
-    }
-
-    ShowModePopup(msg)
-
-    WASD := true
-
-    EnterNormalMode(quick)
-}
-
-ExitWASDMode() {
-    ShowModePopup("NORMAL (VIM)")
-    WASD := false
-}
-
 EnterInsertMode(quick := false) {
-    ;MsgBox, "Welcome to Insert Mode"
-    msg := "INSERT"
-
-    if (quick) {
-        msg := msg . " (QUICK)"
-    }
+    msg := quick ? "INSERT (QUICK)" : "INSERT"
 
     ShowModePopup(msg)
 
-    INSERT_MODE := true
-    INSERT_QUICK := quick
-    NORMAL_MODE := false
-    NORMAL_QUICK := false
+    global INSERT_MODE := true
+    global INSERT_QUICK := quick
+
+    global NORMAL_MODE := false
+    global NORMAL_QUICK := false
 }
 
 ClickInsert(quick := true) {
@@ -153,8 +119,7 @@ ClickInsert(quick := true) {
     EnterInsertMode(quick)
 }
 
-; TODO
-; doesn't really work well
+; TODO doesn't really work well
 DoubleClickInsert(quick := true) {
     Click
     Sleep(100)
@@ -165,310 +130,243 @@ DoubleClickInsert(quick := true) {
 ShowModePopup(msg) {
     ; clean up any lingering popups
     ClosePopup()
+    modeModal.AddText(, msg)
+    modeModal.Show("AutoSize")
 
-    center := MonitorLeftEdge() + (A_ScreenWidth // 2)
-    popX := center - 150
-    popY := (A_ScreenHeight // 2) - 28
-
-    Progress(b x%popX% y%popY% zh0 w300 h56 fm24, , %msg%, , SimSun)
-    SetTimer(ClosePopup, -1600)
-
-    POP_UP := true
+    SetTimer(ClosePopup, -1300)
 }
 
 ClosePopup() {
-    Progress(Off)
-    POP_UP := false
+    modeModal.Hide()
 }
 
-Drag() {
+Drag(mouseButton := "L") {
+    global
+
     if (DRAGGING) {
-        Click(Left, Up)
+        Click(mouseButton " Up")
         DRAGGING := false
+
+        return
     }
-    else {
-        Click(Left, Down)
-        DRAGGING := true
-    }
+
+    Click(mouseButton " Down")
+    DRAGGING := true
 }
 
-RightDrag() {
-    if (DRAGGING) {
-        Click(Right, Up)
-        DRAGGING := false
-    }
-    else {
-        Click(Right, Down)
-        DRAGGING := true
-    }
-}
+; ReleaseDrag(button) {
+;     Click("Middle Up")
+;     Click(button)
 
-MiddleDrag() {
-    if (DRAGGING) {
-        Click(Middle, Up)
-        DRAGGING := false
-    }
-    else {
-        Send("{ MButton down }")
-        DRAGGING := true
-    }
-}
+;     DRAGGING := false
+; }
 
-ReleaseDrag(button) {
-    Click(Middle, Up)
+; Yank() {
+;     wx := 0, wy := 0, width := 0
+;     WinGetPos(&wx, &wy, &width, , "A")
+;     center := wx + width - 180
+;     y := wy + 12
+;     MouseMove(center, y)
+;     Drag()
+; }
+
+MouseClick(button := "L") {
     Click(button)
 
-    DRAGGING := false
+    global DRAGGING := false
 }
 
-Yank() {
-    wx := 0
-    wy := 0
-    width := 0
-
-    WinGetPos(wx, wy, width, , A)
-
-    center := wx + width - 180
-    y := wy + 12
-
-    ;MsgBox, Hello %width% %center%
-    MouseMove(center, y)
-    Drag()
-}
-
-MouseLeft() {
-    Click()
-    DRAGGING := false
-}
-
-MouseRight() {
-    Click(Right)
-    DRAGGING := false
-}
-
-MouseMiddle() {
-    Click(Middle)
-    DRAGGING := false
-}
-
-; TODO: When we have more monitors, set up H and L to use current screen as basis
-; hard to test when I only have the one
+; ; TODO: When we have more monitors, set up H and L to use current screen as basis
+; ; hard to test when I only have the one
 
 JumpMiddle() {
-    CoordMode(Mouse, Screen)
+    CoordMode("Mouse", "Screen")
     MouseMove(A_ScreenWidth // 2, A_ScreenHeight // 2)
 }
 
-JumpMiddle2() {
-    CoordMode(Mouse, Screen)
-    MouseMove(A_ScreenWidth + A_ScreenWidth // 2, A_ScreenHeight // 2)
-}
+; JumpMiddle2() {
+;     CoordMode("Mouse", "Screen")
+;     MouseMove(A_ScreenWidth + A_ScreenWidth // 2, A_ScreenHeight // 2)
+; }
+; JumpMiddle3() {
+;     CoordMode("Mouse", "Screen")
+;     MouseMove(A_ScreenWidth * 2 + A_ScreenWidth // 2, A_ScreenHeight // 2)
+; }
 
-JumpMiddle3() {
-    CoordMode(Mouse, Screen)
-    MouseMove(A_ScreenWidth * 2 + A_ScreenWidth // 2, A_ScreenHeight // 2)
-}
-
-MonitorLeftEdge() {
+GetMonitorLeftEdge() {
     mx := 0
 
-    CoordMode(Mouse, Screen)
-    MouseGetPos(mx)
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&mx)
 
-    monitor := (mx // A_ScreenWidth)
-
-    return monitor * A_ScreenWidth
+    return mx // A_ScreenWidth * A_ScreenWidth
 }
 
-JumpLeftEdge() {
-    x := MonitorLeftEdge() + 2
-    y := 0
+JumpToEdge(direction) {
+    x := 0, y := 0
 
-    CoordMode(Mouse, Screen)
-    MouseGetPos(, y)
+    switch direction {
+        case "left":
+            x := GetMonitorLeftEdge() + 2
+
+            CoordMode("Mouse", "Screen")
+            MouseGetPos(, &y)
+
+        case "bottom":
+            y := A_ScreenHeight
+
+            CoordMode("Mouse", "Screen")
+            MouseGetPos(&x)
+
+        case "top":
+            CoordMode("Mouse", "Screen")
+            MouseGetPos(&x)
+
+        case "right":
+            x := GetMonitorLeftEdge() + A_ScreenWidth - 2
+
+            CoordMode("Mouse", "Screen")
+            MouseGetPos(, &y)
+    }
+
     MouseMove(x, y)
 }
 
-JumpBottomEdge() {
-    x := 0
-
-    CoordMode(Mouse, Screen)
-    MouseGetPos(x)
-    MouseMove(x, A_ScreenHeight - 0)
+MouseBrowserNavigate(to) {
+    if (to == "back") {
+        Click("X1")
+    }
+    else if (to == "forward") {
+        Click("X2")
+    }
 }
 
-JumpTopEdge() {
-    x := 0
-
-    CoordMode(Mouse, Screen)
-    MouseGetPos(x)
-    MouseMove(x, 0)
+ScrollTo(direction, repeatFor := 1) {
+    loop repeatFor {
+        switch direction {
+            case "up": Click("WheelUp")
+            case "down": Click("WheelDown")
+        }
+    }
 }
 
-JumpRightEdge() {
-    x := MonitorLeftEdge() + A_ScreenWidth - 2
-    y := 0
-
-    CoordMode(Mouse, Screen)
-    MouseGetPos(, y)
-    MouseMove(x, y)
-}
-
-MouseBack() {
-    Click(X1)
-}
-
-MouseForward() {
-    Click(X2)
-}
-
-ScrollUp() {
-    Click(WheelUp)
-}
-
-ScrollDown() {
-    Click(WheelDown)
-}
-
-ScrollUpMore() {
-    Click(WheelUp)
-    Click(WheelUp)
-    Click(WheelUp)
-    Click(WheelUp)
-
-    return
-}
-
-ScrollDownMore() {
-    Click(WheelDown)
-    Click(WheelDown)
-    Click(WheelDown)
-    Click(WheelDown)
-
-    return
-}
-
-; "FINAL" MODE SWITCH BINDINGS
+;? "FINAL" MODE SWITCH BINDINGS
 Home:: EnterNormalMode()
 Insert:: EnterInsertMode()
 <#<!n:: EnterNormalMode()
 <#<!i:: EnterInsertMode()
 
-; escape hatches
-+Home:: Send("{ Home }")
-+Insert:: Send("{ Insert }")
+;? escape hatches
++Home:: Send("{Home}")
++Insert:: Send("{Insert}")
 
 ; TODO doesn't turn capslock off.
 ; ^Capslock:: Send, { Capslock }
-; meh. good enough.
 ; ^+Capslock:: SetCapsLockState, Off
 
 #HotIf (NORMAL_MODE)
-+`:: ClickInsert(false) ; focus window and enter Insert
-`:: ClickInsert(true) ; path to Quick Insert
-~f:: EnterInsertMode(true) ; passthru for Vimium hotlinks
-~^f:: EnterInsertMode(true) ; passthru to common "search" hotkey
-~^t:: EnterInsertMode(true) ; passthru for new tab
-~Delete:: EnterInsertMode(true) ; passthru for quick edits
-+;:: EnterInsertMode(true) ; do not pass thru
-h:: return ; intercept movement keys
-j:: return
-k:: return
-l:: return
-+H:: JumpLeftEdge()
-+J:: JumpBottomEdge()
-+K:: JumpTopEdge()
-+L:: JumpRightEdge()
-*i:: MouseLeft() ; commands
-*o:: MouseRight()
-*p:: MouseMiddle()
-+Y:: Yank() ; do not conflict with y as in "scroll up"
-v:: Drag()
-z:: RightDrag()
-c:: MiddleDrag()
-+M:: JumpMiddle()
-+,:: JumpMiddle2()
-+.:: JumpMiddle3()
-m:: JumpMiddle() ; ahh what the heck, remove shift requirements for jump bindings
-,:: JumpMiddle2() ; maybe take "m" back if we ever make marks
-.:: JumpMiddle3()
-n:: MouseForward()
-b:: MouseBack()
-u:: ScrollUpMore() ; allow for modifier keys (or more importantly a lack of them) by lifting ctrl requirement for these hotkeys
-*0:: ScrollDown()
-*9:: ScrollUp()
-]:: ScrollDown()
-[:: ScrollUp()
-+]:: ScrollDownMore()
-+[:: ScrollUpMore()
-End:: Click(Up)
++SC029:: ClickInsert(false) ; shift + tilde, focus window and enter Insert
+SC029:: ClickInsert(true) ; tilde, path to Quick Insert
+~SC021:: EnterInsertMode(true) ; f, passthrough for Vimium hotlinks
+~^SC021:: EnterInsertMode(true) ; f, passthrough to common "search" hotkey
+~^SC014:: EnterInsertMode(true) ; t, passthrough for new tab
+~Delete:: EnterInsertMode(true) ; passthrough for quick edits
++SC027:: EnterInsertMode(true) ; the ; symbol with shift, do not pass through
+; ? intercept movement keys
+SC023:: return ; h
++SC023:: JumpToEdge("left")
+SC024:: return ; j
++SC024:: JumpToEdge("bottom")
+SC025:: return ; k
++SC025:: JumpToEdge("top")
+SC026:: return ; l
++SC026:: JumpToEdge("right")
+; ? commands
+*SC017:: MouseClick() ; i
+*SC018:: MouseClick("R") ; o
+*SC019:: MouseClick("M") ; p
+; shift + y, do not conflict with y as in  "scroll up"
+; +SC015:: Yank()  ;! It is unclear why this is necessary.
+SC02F:: Drag() ; v
+SC02C:: Drag("R") ; z
+SC02E:: Drag("M") ; c
+SC032:: JumpMiddle() ; m
+; SC033:: JumpMiddle2() ;! It is unclear why this is necessary.
+; SC034:: JumpMiddle3() ;! It is unclear why this is necessary.
+SC031:: MouseBrowserNavigate("forward") ; n
+SC030:: MouseBrowserNavigate("back") ; b
+; TODO allow for modifier keys (or more importantly a lack of them) by lifting ctrl requirement for these hotkeys
+*SC00A:: ScrollTo("up") ; 9
+*SC00B:: ScrollTo("down") ; 0
+SC01A:: ScrollTo("up") ; [
++SC01A:: ScrollTo("up", 4) ; TODO not working
+SC01B:: ScrollTo("down") ; ]
++SC01B:: ScrollTo("down", 4) ; TODO not working
+SC016:: ScrollTo("up", 4) ; u
+End:: Click("Up") ;! What is this?
 
-#HotIf (NORMAL_MODE && NORMAL_QUICK == false)
+#HotIf (NORMAL_MODE && !NORMAL_QUICK)
 Capslock:: EnterInsertMode(true)
 +Capslock:: EnterInsertMode()
 
-; Add Vim hotkeys that conflict with WASD mode
-#HotIf (NORMAL_MODE && WASD == false)
-<#<!r:: EnterWASDMode()
-e:: ScrollDown()
-y:: ScrollUp()
-d:: ScrollDownMore()
-+S:: DoubleClickInsert()
+;? Add Vim hotkeys that conflict with WASD mode
+#HotIf (NORMAL_MODE && !WASD)
+; <#<!r:: EnterWASDMode() ;! Conflicts with the recording mode of Windows game bar
+SC015:: ScrollTo("up") ; y
+SC012:: ScrollTo("down") ; e
+SC020:: ScrollTo("down", 4) ; d
+; +SC01F:: DoubleClickInsert() ; shift + s ; TODO doesn't really work well?
 
-; No shift requirements in normal quick mode
 #HotIf (NORMAL_MODE && NORMAL_QUICK)
 Capslock:: return
-m:: JumpMiddle()
-,:: JumpMiddle2()
-.:: JumpMiddle3()
-y:: Yank()
+SC032:: JumpMiddle() ; m
+; ,:: JumpMiddle2() ;! It is unclear why this is necessary.
+; .:: JumpMiddle3() ;! It is unclear why this is necessary.
+; y:: Yank() ;! It is unclear why this is necessary.
 
-; for windows explorer
+;? for windows explorer
 #HotIf (NORMAL_MODE && WinActive("ahk_class CabinetWClass"))
-^h:: Send("{ Left }")
-^j:: Send("{ Down }")
-^k:: Send("{ Up }")
-^l:: Send("{ Right }")
+^SC023:: Send("{ Left }") ; ctrl + h
+^SC024:: Send("{ Down }") ; ctrl + j
+^SC025:: Send("{ Up }") ; ctrl + k
+^SC026:: Send("{ Right }") ; ctrl + l
 
-#HotIf (INSERT_MODE && INSERT_QUICK == false)
+#HotIf (INSERT_MODE && !INSERT_QUICK)
 Capslock:: EnterNormalMode(true)
 +Capslock:: EnterNormalMode()
+<+Space:: EnterNormalMode(, "wasd")
+>+Space:: EnterNormalMode()
 
 #HotIf (INSERT_MODE && INSERT_QUICK)
 ~Enter:: EnterNormalMode()
-~^c:: EnterNormalMode() ; Copy and return to Normal Mode
+~^SC02E:: EnterNormalMode() ; ctrl + c, copy and return to Normal Mode
 Escape:: EnterNormalMode()
 Capslock:: EnterNormalMode()
 +Capslock:: EnterNormalMode()
 
 #HotIf (NORMAL_MODE && WASD)
-<#<!r:: ExitWASDMode()
-w:: return ; Intercept movement keys
-a:: return
-s:: return
-d:: return
-+C:: JumpMiddle()
-+W:: JumpTopEdge()
-+A:: JumpLeftEdge()
-+S:: JumpBottomEdge()
-+D:: JumpRightEdge()
-*e:: ScrollDown()
-*q:: ScrollUp()
-*r:: MouseLeft()
-t:: MouseRight()
-+T:: MouseRight()
-*y:: MouseMiddle()
+; <#<!r:: ExitWASDMode() ;! Conflicts with the recording mode of Windows game bar
+;? Intercept movement keys
+SC011:: return ; w
+SC01E:: return ; a
+SC01F:: return ; s
+SC020:: return ; d
++SC02E:: JumpMiddle() ; shift + c
++SC011:: JumpToEdge("top") ; shift + w
++SC01E:: JumpToEdge("left") ; shift + a
++SC01F:: JumpToEdge("bottom") ; shift + s
++SC020:: JumpToEdge("right") ; shift + d
+*SC012:: ScrollTo("down") ; e
+*SC010:: ScrollTo("up") ; q
+*SC013:: MouseClick() ; r
+SC014:: MouseClick("R") ; t
+*SC015:: MouseClick("M") ; y
+~BackSpace:: EnterInsertMode(true) ; passthrough for quick edits
 
-#HotIf (DRAGGING)
-LButton:: ReleaseDrag(1)
-MButton:: ReleaseDrag(2)
-RButton:: ReleaseDrag(3)
-
-#HotIf (POP_UP)
-Escape:: ClosePopup()
-
-; Insert Mode by default
-EnterInsertMode()
+; #HotIf (DRAGGING) ;! It looks like broken code.
+; LButton:: ReleaseDrag(1)
+; MButton:: ReleaseDrag(2)
+; RButton:: ReleaseDrag(3)
 
 ; FUTURE CONSIDERATIONS
 ; AwaitKey function for vimesque multi keystroke commands (gg, yy, 2M, etc)
@@ -477,10 +375,3 @@ EnterInsertMode()
 ; z for click and release middle mouse? this has historically not worked well
 ; c guess that leaves c for hold / release right mouse (x is useful in chromium)
 ; Whatever you can think of! Github issues and pull requests welcome
-
-; РЕКОМЕНДАЦИИ НА БУДУЩЕЕ
-; Функция AwaitKey для команд vimesque с несколькими нажатиями клавиш (gg, yy, 2M и т.д.)
-; "Метки" для запоминания и восстановления положения мыши (требуется клавиша ожидания)
-; v, чтобы отпустить мышь, когда она нажата с помощью клавиши v (давайте обрежем в Paint.exe)
-; z для нажатия и отпускания средней кнопки мыши? исторически это не очень хорошо работало
-; c, полагаю, остается c для удержания / отпускания правой кнопки мыши (x полезно в chromium)
