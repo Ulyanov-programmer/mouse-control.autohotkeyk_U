@@ -260,8 +260,8 @@ Insert:: EnterInsertMode()
 +Insert:: Send("{Insert}")
 
 ; TODO doesn't turn capslock off.
-; ^Capslock:: Send, { Capslock }
-; ^+Capslock:: SetCapsLockState, Off
+^Capslock:: Send("{ Capslock }")
+^+Capslock:: SetCapsLockState("Off")
 
 #HotIf (NORMAL_MODE)
 +SC029:: ClickInsert(false) ; shift + tilde, focus window and enter Insert
