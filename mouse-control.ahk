@@ -7,9 +7,6 @@ InstallKeybdHook
 ; Astrid Ivy
 ; 2019-04-14
 
-; TODO сделать красивым
-modeModal := Gui(, "Mode")
-
 global INSERT_MODE := false
 global INSERT_QUICK := false
 global NORMAL_MODE := false
@@ -23,6 +20,7 @@ global VELOCITY_X := 0
 global VELOCITY_Y := 0
 
 global DRAGGING := false
+global SLEEP_TIMER := 0
 
 ; Insert Mode by default
 EnterInsertMode()
@@ -88,7 +86,6 @@ EnterNormalMode(quick := false, mode := "vim") {
     msg := quick
         ? msg . " (QUICK)" : msg . ""
 
-    ; TODO если удерживать то будет дублировать
     ShowModePopup(msg)
 
     if (NORMAL_MODE) {
@@ -119,7 +116,6 @@ ClickInsert(quick := true) {
     EnterInsertMode(quick)
 }
 
-; TODO doesn't really work well
 DoubleClickInsert(quick := true) {
     Click
     Sleep(100)
@@ -128,16 +124,19 @@ DoubleClickInsert(quick := true) {
 }
 
 ShowModePopup(msg) {
-    ; clean up any lingering popups
-    ClosePopup()
-    modeModal.AddText(, msg)
-    modeModal.Show("AutoSize")
-
-    SetTimer(ClosePopup, -1300)
+    HideTrayTip()
+    TrayTip(msg, "Mouse control", "Mute")
+    SetTimer(HideTrayTip, 2000) ; Let it display for 2 seconds.
 }
 
-ClosePopup() {
-    modeModal.Hide()
+HideTrayTip() {
+    TrayTip  ; Attempt to hide it the normal way.
+
+    if SubStr(A_OSVersion, 1, 3) = "10." {
+        A_IconHidden := true
+        Sleep 200  ; It may be necessary to adjust this sleep.
+        A_IconHidden := false
+    }
 }
 
 Drag(mouseButton := "L") {
@@ -296,12 +295,13 @@ SC032:: JumpMiddle() ; m
 SC031:: MouseBrowserNavigate("forward") ; n
 SC030:: MouseBrowserNavigate("back") ; b
 ; TODO allow for modifier keys (or more importantly a lack of them) by lifting ctrl requirement for these hotkeys
+;? fixed?
 *SC00A:: ScrollTo("up") ; 9
 *SC00B:: ScrollTo("down") ; 0
 SC01A:: ScrollTo("up") ; [
-+SC01A:: ScrollTo("up", 4) ; TODO not working
+#SC01A:: ScrollTo("up", 4) ; win + [
 SC01B:: ScrollTo("down") ; ]
-+SC01B:: ScrollTo("down", 4) ; TODO not working
+#SC01B:: ScrollTo("down", 4) ; win + ]
 SC016:: ScrollTo("up", 4) ; u
 End:: Click("Up") ;! What is this?
 
