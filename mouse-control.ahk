@@ -1,4 +1,5 @@
 #Requires AutoHotkey v2.0
+#SingleInstance
 InstallKeybdHook
 
 ; vim_mouse_2.ahk
@@ -169,8 +170,14 @@ Drag(mouseButton := "L") {
 ;     Drag()
 ; }
 
-MouseClick(button := "L") {
-    Click(button)
+EmulateMouseButton(button := "L") {
+    ; If the key is held down, should simulate holding down the mouse key. Otherwise, it's letting up.
+    if (InStr(A_ThisHotkey, "Up")) {
+        Click(button " Up")
+    }
+    else {
+        Click(button " Down")
+    }
 
     global DRAGGING := false
 }
@@ -258,7 +265,7 @@ DoByDoublePress(callback, repeatFor := 1) {
         return
     }
 
-    ;? Implements scrolling N-times with a double tap.
+    ;? Implements an action for N-times with a double tap.
     ; Initially, A_TimeSincePriorHotkey and A_PriorHotkey are empty strings.
     ; Using an empty string in a comparison is an error.
     ; Try prevents this initial inevitable error.
@@ -309,9 +316,12 @@ SC025:: return ; k
 SC026:: return ; l
 +SC026:: JumpToEdge("right")
 ; ? commands
-*SC017:: MouseClick() ; i
-*SC018:: MouseClick("R") ; o
-*SC019:: MouseClick("M") ; p
+*SC017:: EmulateMouseButton() ; i
+*SC017 Up:: EmulateMouseButton() ; i
+*SC018:: EmulateMouseButton("R") ; o
+*SC018 Up:: EmulateMouseButton("R") ; o
+*SC019:: EmulateMouseButton("M") ; p
+*SC019 Up:: EmulateMouseButton("M") ; p
 ; shift + y, do not conflict with y as in  "scroll up"
 ; +SC015:: Yank()  ;! It is unclear why this is necessary.
 SC02F:: Drag() ; v
@@ -382,9 +392,12 @@ SC020:: return ; d
 +SC020:: JumpToEdge("right") ; shift + d
 SC012:: ScrollTo("down") ; e
 *SC010:: ScrollTo("up") ; q
-*SC013:: MouseClick() ; r
-SC014:: MouseClick("R") ; t
-*SC015:: MouseClick("M") ; y
+*SC013:: EmulateMouseButton() ; r
+*SC013 Up:: EmulateMouseButton() ; r
+SC014:: EmulateMouseButton("R") ; t
+*SC014 Up:: EmulateMouseButton("R") ; t
+*SC015:: EmulateMouseButton("M") ; y
+*SC015 Up:: EmulateMouseButton("M") ; y
 ~BackSpace:: EnterInsertMode(true) ; passthrough for quick edits
 
 ; #HotIf (DRAGGING) ;! It looks like broken code.
@@ -393,7 +406,6 @@ SC014:: MouseClick("R") ; t
 ; RButton:: ReleaseDrag(3)
 
 ; TODO: "Marks" for remembering and restoring mouse positions (needs AwaitKey)
-; TODO: v to let go of mouse when mouse is down with v (lemme crop in Paint.exe)
 ; ?TODO: z for click and release middle mouse? this has historically not worked well
 ; ?TODO: c guess that leaves c for hold / release right mouse (x is useful in chromium)
 ;
