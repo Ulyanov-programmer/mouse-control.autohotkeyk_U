@@ -20,7 +20,7 @@ global VELOCITY_X := 0
 global VELOCITY_Y := 0
 
 global DRAGGING := false
-global SLEEP_TIMER := 0
+global DOUBLE_PRESS_ACTION_IS_ACTIVE := false
 
 ; Insert Mode by default
 EnterInsertMode()
@@ -126,8 +126,7 @@ DoubleClickInsert(quick := true) {
 ShowModePopup(msg) {
     HideTrayTip()
     TrayTip(msg, "Mouse control", "Mute")
-    SetTimer(HideTrayTip, 2000) ; Let it display for 2 seconds.
-    SetTimer(HideTrayTip, 0)
+    SetTimer(HideTrayTip, -2000) ; Let it display for 2 seconds.
 }
 
 HideTrayTip() {
@@ -241,11 +240,39 @@ MouseBrowserNavigate(to) {
     }
 }
 
-ScrollTo(direction, repeatFor := 1) {
-    loop repeatFor {
-        switch direction {
-            case "up": Click("WheelUp")
-            case "down": Click("WheelDown")
+ScrollTo(direction) {
+    switch direction {
+        case "up":
+            Click("WheelUp")
+        case "down":
+            Click("WheelDown")
+    }
+
+    DoByDoublePress(ScrollTo.Bind(direction), 5)
+}
+
+DoByDoublePress(callback, repeatFor := 1) {
+    global
+
+    if (DOUBLE_PRESS_ACTION_IS_ACTIVE) {
+        return
+    }
+
+    ;? Implements scrolling N-times with a double tap.
+    ; Initially, A_TimeSincePriorHotkey and A_PriorHotkey are empty strings.
+    ; Using an empty string in a comparison is an error.
+    ; Try prevents this initial inevitable error.
+    try {
+        ; Check if it's been 250 ms or less since the prior hotkey was fired
+        ; And check if the current fired hotkey matches the prior hotkey.
+        if (A_TimeSincePriorHotkey < 250 && A_ThisHotkey = A_PriorHotkey) {
+            DOUBLE_PRESS_ACTION_IS_ACTIVE := true
+
+            loop repeatFor {
+                callback()
+            }
+
+            DOUBLE_PRESS_ACTION_IS_ACTIVE := false
         }
     }
 }
@@ -300,11 +327,8 @@ SC030:: MouseBrowserNavigate("back") ; b
 *SC00A:: ScrollTo("up") ; 9
 *SC00B:: ScrollTo("down") ; 0
 SC01A:: ScrollTo("up") ; [
-#SC01A:: ScrollTo("up", 4) ; win + [
 SC01B:: ScrollTo("down") ; ]
-#SC01B:: ScrollTo("down", 4) ; win + ]
-SC016:: ScrollTo("up", 4) ; u
-End:: Click("Up") ;! What is this?
+; End:: Click("Up") ;! What is this?
 
 #HotIf (NORMAL_MODE && !NORMAL_QUICK)
 Capslock:: EnterInsertMode(true)
@@ -315,7 +339,6 @@ Capslock:: EnterInsertMode(true)
 ; <#<!r:: EnterWASDMode() ;! Conflicts with the recording mode of Windows game bar
 SC015:: ScrollTo("up") ; y
 SC012:: ScrollTo("down") ; e
-SC020:: ScrollTo("down", 4) ; d
 ; +SC01F:: DoubleClickInsert() ; shift + s ; TODO doesn't really work well?
 
 #HotIf (NORMAL_MODE && NORMAL_QUICK)
@@ -357,8 +380,7 @@ SC020:: return ; d
 +SC01E:: JumpToEdge("left") ; shift + a
 +SC01F:: JumpToEdge("bottom") ; shift + s
 +SC020:: JumpToEdge("right") ; shift + d
-; *SC012:: ScrollTo("down") ; e
-h & h:: ScrollTo("down", 5) ; e
+SC012:: ScrollTo("down") ; e
 *SC010:: ScrollTo("up") ; q
 *SC013:: MouseClick() ; r
 SC014:: MouseClick("R") ; t
@@ -370,7 +392,6 @@ SC014:: MouseClick("R") ; t
 ; MButton:: ReleaseDrag(2)
 ; RButton:: ReleaseDrag(3)
 
-; TODO: AwaitKey function for vimesque multi keystroke commands (gg, yy, 2M, etc)
 ; TODO: "Marks" for remembering and restoring mouse positions (needs AwaitKey)
 ; TODO: v to let go of mouse when mouse is down with v (lemme crop in Paint.exe)
 ; ?TODO: z for click and release middle mouse? this has historically not worked well
