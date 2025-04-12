@@ -127,6 +127,7 @@ ShowModePopup(msg) {
     HideTrayTip()
     TrayTip(msg, "Mouse control", "Mute")
     SetTimer(HideTrayTip, 2000) ; Let it display for 2 seconds.
+    SetTimer(HideTrayTip, 0)
 }
 
 HideTrayTip() {
@@ -356,7 +357,8 @@ SC020:: return ; d
 +SC01E:: JumpToEdge("left") ; shift + a
 +SC01F:: JumpToEdge("bottom") ; shift + s
 +SC020:: JumpToEdge("right") ; shift + d
-*SC012:: ScrollTo("down") ; e
+; *SC012:: ScrollTo("down") ; e
+h & h:: ScrollTo("down", 5) ; e
 *SC010:: ScrollTo("up") ; q
 *SC013:: MouseClick() ; r
 SC014:: MouseClick("R") ; t
@@ -368,10 +370,10 @@ SC014:: MouseClick("R") ; t
 ; MButton:: ReleaseDrag(2)
 ; RButton:: ReleaseDrag(3)
 
-; FUTURE CONSIDERATIONS
-; AwaitKey function for vimesque multi keystroke commands (gg, yy, 2M, etc)
-; "Marks" for remembering and restoring mouse positions (needs AwaitKey)
-; v to let go of mouse when mouse is down with v (lemme crop in Paint.exe)
-; z for click and release middle mouse? this has historically not worked well
-; c guess that leaves c for hold / release right mouse (x is useful in chromium)
-; Whatever you can think of! Github issues and pull requests welcome
+; TODO: AwaitKey function for vimesque multi keystroke commands (gg, yy, 2M, etc)
+; TODO: "Marks" for remembering and restoring mouse positions (needs AwaitKey)
+; TODO: v to let go of mouse when mouse is down with v (lemme crop in Paint.exe)
+; ?TODO: z for click and release middle mouse? this has historically not worked well
+; ?TODO: c guess that leaves c for hold / release right mouse (x is useful in chromium)
+;
+; Github issues and pull requests welcome
