@@ -174,14 +174,14 @@ Drag(mouseButton := "L") {
 ;     DRAGGING := false
 ; }
 
-; Yank() {
-;     wx := 0, wy := 0, width := 0
-;     WinGetPos(&wx, &wy, &width, , "A")
-;     center := wx + width - 180
-;     y := wy + 12
-;     MouseMove(center, y)
-;     Drag()
-; }
+Yank() {
+    wx := 0, wy := 0, width := 0
+    WinGetPos(&wx, &wy, &width, , "A")
+    center := wx + width - 180
+    y := wy + 12
+    MouseMove(center, y)
+    Drag()
+}
 
 EmulateMouseButton(button := "L") {
     ; If the key is held down, should simulate holding down the mouse key. Otherwise, it's letting up.
@@ -335,8 +335,7 @@ SC026:: return ; l
 *SC018 Up:: EmulateMouseButton("R") ; o
 *SC019:: EmulateMouseButton("M") ; p
 *SC019 Up:: EmulateMouseButton("M") ; p
-; shift + y, do not conflict with y as in  "scroll up"
-; +SC015:: Yank()  ;! It is unclear why this is necessary.
++SC015:: Yank() ; shift + y, do not conflict with y as in  "scroll up"
 SC02F:: Drag() ; v
 SC02C:: Drag("R") ; z
 SC02E:: Drag("M") ; c
@@ -369,7 +368,6 @@ Capslock:: return
 SC032:: JumpMiddle() ; m
 ; ,:: JumpMiddle2() ;! It is unclear why this is necessary.
 ; .:: JumpMiddle3() ;! It is unclear why this is necessary.
-; y:: Yank() ;! It is unclear why this is necessary.
 
 ;* for windows explorer
 #HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT && WinActive("ahk_class CabinetWClass"))
