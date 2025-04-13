@@ -8,14 +8,18 @@ InstallKeybdHook
 ; Astrid Ivy
 ; 2019-04-14
 
-global INSERT_MODE := false
-global INSERT_QUICK := false
-global NORMAL_MODE := false
-global NORMAL_QUICK := false
-global WASD := true
+; Use these constants to specify the input type.
+global CONTROL_TYPE_NAME_VIM := "vim"
+global CONTROL_TYPE_NAME_WASD := "wasd"
+global CONTROL_TYPE_NAME_INSERT := "none"
 
-global MOUSE_FORCE := 1.8
-global MOUSE_RESISTANCE := 0.982
+global INPUT_MODE := {
+    type: CONTROL_TYPE_NAME_INSERT,
+    quick: false,
+}
+
+global MOUSE_FORCE := 1.2
+global MOUSE_RESISTANCE := 0.892
 
 global VELOCITY_X := 0
 global VELOCITY_Y := 0
@@ -41,20 +45,28 @@ Accelerate(velocity, pos, neg) {
 }
 
 MoveCursor() {
-    LEFT := WASD
-        ? 0 - GetKeyState("SC01E", "P") : 0 - GetKeyState("SC023", "P")
-    DOWN := WASD
-        ? 0 + GetKeyState("SC01F", "P") : 0 + GetKeyState("SC024", "P")
-    UP := WASD
-        ? 0 - GetKeyState("SC011", "P") : 0 - GetKeyState("SC025", "P")
-    RIGHT := WASD
-        ? 0 + GetKeyState("SC020", "P") : 0 + GetKeyState("SC026", "P")
+    LEFT := INPUT_MODE.type == CONTROL_TYPE_NAME_WASD
+        ? 0 - GetKeyState("SC01E", "P")
+            : 0 - GetKeyState("SC023", "P")
+    DOWN := INPUT_MODE.type == CONTROL_TYPE_NAME_WASD
+        ? 0 + GetKeyState("SC01F", "P")
+            : 0 + GetKeyState("SC024", "P")
+    UP := INPUT_MODE.type == CONTROL_TYPE_NAME_WASD
+        ? 0 - GetKeyState("SC011", "P")
+            : 0 - GetKeyState("SC025", "P")
+    RIGHT := INPUT_MODE.type == CONTROL_TYPE_NAME_WASD
+        ? 0 + GetKeyState("SC020", "P")
+            : 0 + GetKeyState("SC026", "P")
 
-    if (NORMAL_QUICK && !GetKeyState("Capslock", "P")) {
+    if (
+        INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT &&
+        INPUT_MODE.quick &&
+        !GetKeyState("Capslock", "P")
+    ) {
         EnterInsertMode()
     }
 
-    if (!NORMAL_MODE) {
+    if (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT) {
         global VELOCITY_X := 0
         global VELOCITY_Y := 0
 
@@ -70,34 +82,27 @@ MoveCursor() {
     MouseMove(VELOCITY_X, VELOCITY_Y, 0, "R")
 
     ;(humble beginnings)
-    ;MsgBox, %NORMAL_MODE%
+    ;MsgBox, %INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT%
     ;msg1 := "h " . LEFT . " j  " . DOWN . " k " . UP . " l " . RIGHT
     ;MsgBox, %msg1%
     ;msg2 := "Moving " . VELOCITY_X . " " . VELOCITY_Y
     ;MsgBox, %msg2%
 }
 
-EnterNormalMode(quick := false, mode := "vim") {
-    global NORMAL_QUICK := quick
-    global WASD := mode == "vim" ? false : true
-    msg := "NORMAL"
+EnterNormalMode(quick := false, mode := CONTROL_TYPE_NAME_VIM) {
+    INPUT_MODE.type := mode
+    INPUT_MODE.quick := quick
 
-    msg := mode == "vim"
+    msg := "MOUSE"
+
+    msg := INPUT_MODE.type == CONTROL_TYPE_NAME_VIM
         ? msg . " (VIM)" : msg . " (WASD)"
-    msg := quick
-        ? msg . " (QUICK)" : msg . ""
+
+    msg := INPUT_MODE.quick
+        ? msg . " QUICK" : msg . ""
 
     ShowModePopup(msg)
-
-    if (NORMAL_MODE) {
-        return
-    }
-
-    global NORMAL_MODE := true
-    global INSERT_MODE := false
-    global INSERT_QUICK := false
-
-    SetTimer(MoveCursor, 16)
+    SetTimer(MoveCursor, 5)
 }
 
 EnterInsertMode(quick := false) {
@@ -105,11 +110,8 @@ EnterInsertMode(quick := false) {
 
     ShowModePopup(msg)
 
-    global INSERT_MODE := true
-    global INSERT_QUICK := quick
-
-    global NORMAL_MODE := false
-    global NORMAL_QUICK := false
+    INPUT_MODE.type := CONTROL_TYPE_NAME_INSERT
+    INPUT_MODE.quick := quick
 }
 
 ClickInsert(quick := true) {
@@ -265,7 +267,7 @@ DoByDoublePress(callback, repeatFor := 1) {
         return
     }
 
-    ;? Implements an action for N-times with a double tap.
+    ;* Implements an action for N-times with a double tap.
     ; Initially, A_TimeSincePriorHotkey and A_PriorHotkey are empty strings.
     ; Using an empty string in a comparison is an error.
     ; Try prevents this initial inevitable error.
@@ -284,13 +286,13 @@ DoByDoublePress(callback, repeatFor := 1) {
     }
 }
 
-;? "FINAL" MODE SWITCH BINDINGS
+;* "FINAL" MODE SWITCH BINDINGS
 Home:: EnterNormalMode()
 Insert:: EnterInsertMode()
 <#<!n:: EnterNormalMode()
 <#<!i:: EnterInsertMode()
 
-;? escape hatches
+;* escape hatches
 +Home:: Send("{Home}")
 +Insert:: Send("{Insert}")
 
@@ -298,7 +300,7 @@ Insert:: EnterInsertMode()
 ^Capslock:: Send("{ Capslock }")
 ^+Capslock:: SetCapsLockState("Off")
 
-#HotIf (NORMAL_MODE)
+#HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT)
 +SC029:: ClickInsert(false) ; shift + tilde, focus window and enter Insert
 SC029:: ClickInsert(true) ; tilde, path to Quick Insert
 ~SC021:: EnterInsertMode(true) ; f, passthrough for Vimium hotlinks
@@ -306,7 +308,7 @@ SC029:: ClickInsert(true) ; tilde, path to Quick Insert
 ~^SC014:: EnterInsertMode(true) ; t, passthrough for new tab
 ~Delete:: EnterInsertMode(true) ; passthrough for quick edits
 +SC027:: EnterInsertMode(true) ; the ; symbol with shift, do not pass through
-; ? intercept movement keys
+; * intercept movement keys
 SC023:: return ; h
 +SC023:: JumpToEdge("left")
 SC024:: return ; j
@@ -315,7 +317,7 @@ SC025:: return ; k
 +SC025:: JumpToEdge("top")
 SC026:: return ; l
 +SC026:: JumpToEdge("right")
-; ? commands
+; * commands
 *SC017:: EmulateMouseButton() ; i
 *SC017 Up:: EmulateMouseButton() ; i
 *SC018:: EmulateMouseButton("R") ; o
@@ -340,47 +342,47 @@ SC01A:: ScrollTo("up") ; [
 SC01B:: ScrollTo("down") ; ]
 ; End:: Click("Up") ;! What is this?
 
-#HotIf (NORMAL_MODE && !NORMAL_QUICK)
+#HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT && !INPUT_MODE.quick)
 Capslock:: EnterInsertMode(true)
 +Capslock:: EnterInsertMode()
 
-;? Add Vim hotkeys that conflict with WASD mode
-#HotIf (NORMAL_MODE && !WASD)
+;* Add Vim hotkeys that conflict with WASD mode
+#HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_VIM)
 ; <#<!r:: EnterWASDMode() ;! Conflicts with the recording mode of Windows game bar
 SC015:: ScrollTo("up") ; y
 SC012:: ScrollTo("down") ; e
 ; +SC01F:: DoubleClickInsert() ; shift + s ; TODO doesn't really work well?
 
-#HotIf (NORMAL_MODE && NORMAL_QUICK)
+#HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT && INPUT_MODE.quick)
 Capslock:: return
 SC032:: JumpMiddle() ; m
 ; ,:: JumpMiddle2() ;! It is unclear why this is necessary.
 ; .:: JumpMiddle3() ;! It is unclear why this is necessary.
 ; y:: Yank() ;! It is unclear why this is necessary.
 
-;? for windows explorer
-#HotIf (NORMAL_MODE && WinActive("ahk_class CabinetWClass"))
+;* for windows explorer
+#HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT && WinActive("ahk_class CabinetWClass"))
 ^SC023:: Send("{ Left }") ; ctrl + h
 ^SC024:: Send("{ Down }") ; ctrl + j
 ^SC025:: Send("{ Up }") ; ctrl + k
 ^SC026:: Send("{ Right }") ; ctrl + l
 
-#HotIf (INSERT_MODE && !INSERT_QUICK)
+#HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT && !INPUT_MODE.quick)
 Capslock:: EnterNormalMode(true)
 +Capslock:: EnterNormalMode()
 <+Space:: EnterNormalMode(, "wasd")
 >+Space:: EnterNormalMode()
 
-#HotIf (INSERT_MODE && INSERT_QUICK)
+#HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT && INPUT_MODE.quick)
 ~Enter:: EnterNormalMode()
 ~^SC02E:: EnterNormalMode() ; ctrl + c, copy and return to Normal Mode
 Escape:: EnterNormalMode()
 Capslock:: EnterNormalMode()
 +Capslock:: EnterNormalMode()
 
-#HotIf (NORMAL_MODE && WASD)
+#HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_WASD)
 ; <#<!r:: ExitWASDMode() ;! Conflicts with the recording mode of Windows game bar
-;? Intercept movement keys
+;* Intercept movement keys
 SC011:: return ; w
 SC01E:: return ; a
 SC01F:: return ; s
