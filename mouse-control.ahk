@@ -63,6 +63,7 @@ MoveCursor() {
         INPUT_MODE.quick &&
         !GetKeyState("Capslock", "P")
     ) {
+        ; If the fast mode is active, it switches back when release the key.
         EnterInsertMode()
     }
 
@@ -90,9 +91,15 @@ MoveCursor() {
 }
 
 EnterNormalMode(quick := false, mode := CONTROL_TYPE_NAME_VIM) {
-    INPUT_MODE.type := mode
-    INPUT_MODE.quick := quick
+    ;
+    if (INPUT_MODE.quick) {
+        INPUT_MODE.type := previousInputType
+    }
+    else {
+        INPUT_MODE.type := mode
+    }
 
+    INPUT_MODE.quick := quick
     msg := "MOUSE"
 
     msg := INPUT_MODE.type == CONTROL_TYPE_NAME_VIM
@@ -109,6 +116,10 @@ EnterInsertMode(quick := false) {
     msg := quick ? "INSERT (QUICK)" : "INSERT"
 
     ShowModePopup(msg)
+
+    if (quick) {
+        global previousInputType := INPUT_MODE.type
+    }
 
     INPUT_MODE.type := CONTROL_TYPE_NAME_INSERT
     INPUT_MODE.quick := quick
@@ -368,9 +379,10 @@ SC032:: JumpMiddle() ; m
 ^SC026:: Send("{ Right }") ; ctrl + l
 
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT && !INPUT_MODE.quick)
+; TODO: this key activates only the mode for VIМ, need an option for WASD.
 Capslock:: EnterNormalMode(true)
 +Capslock:: EnterNormalMode()
-<+Space:: EnterNormalMode(, "wasd")
+<+Space:: EnterNormalMode(, CONTROL_TYPE_NAME_WASD)
 >+Space:: EnterNormalMode()
 
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT && INPUT_MODE.quick)
