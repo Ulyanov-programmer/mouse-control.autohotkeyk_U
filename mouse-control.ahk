@@ -301,19 +301,10 @@ DoByDoublePress(callback, repeatFor := 1) {
 +SC029:: ClickInsert(false) ; shift + tilde, focus window and enter Insert
 SC029:: ClickInsert(true) ; tilde, path to Quick Insert
 ~SC021:: EnterInsertMode(true) ; f, passthrough for Vimium hotlinks
-~^SC021:: EnterInsertMode(true) ; f, passthrough to common "search" hotkey
-~^SC014:: EnterInsertMode(true) ; t, passthrough for new tab
+~^SC021:: EnterInsertMode(true) ; Ctrl + f, passthrough to common "search" hotkey
+~^SC014:: EnterInsertMode(true) ; Ctrl + t, passthrough for new tab
 ~Delete:: EnterInsertMode(true) ; passthrough for quick edits
 +SC027:: EnterInsertMode(true) ; the ; symbol with shift, do not pass through
-; * intercept movement keys
-SC023:: return ; h
-+SC023:: JumpToEdge("left")
-SC024:: return ; j
-+SC024:: JumpToEdge("bottom")
-SC025:: return ; k
-+SC025:: JumpToEdge("top")
-SC026:: return ; l
-+SC026:: JumpToEdge("right")
 ; * commands
 SC039:: EmulateMouseButton()
 !SC039:: EmulateMouseButton("R") ; Alt + Space
@@ -336,6 +327,15 @@ SC01B:: ScrollTo("down") ; ]
 SC015:: ScrollTo("up") ; y
 SC012:: ScrollTo("down") ; e
 ; +SC01F:: DoubleClickInsert() ; shift + s ; TODO doesn't really work well?
+; * intercept movement keys
+SC023:: return ; h
++SC023:: JumpToEdge("left")
+SC024:: return ; j
++SC024:: JumpToEdge("bottom")
+SC025:: return ; k
++SC025:: JumpToEdge("top")
+SC026:: return ; l
++SC026:: JumpToEdge("right")
 
 ;* for windows explorer
 #HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT && WinActive("ahk_class CabinetWClass"))
@@ -367,8 +367,4 @@ SC020:: return ; d
 +SC020:: JumpToEdge("right") ; shift + d
 SC012:: ScrollTo("down") ; e
 *SC010:: ScrollTo("up") ; q
-SC039:: EmulateMouseButton()
-!SC039:: EmulateMouseButton("R") ; Alt + Space
-^SC039:: EmulateMouseButton("M") ; Ctrl + Space
-SC02E:: Drag("M") ; c
 ~BackSpace:: EnterInsertMode(true) ; passthrough for quick edits
