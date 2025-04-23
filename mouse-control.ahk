@@ -340,8 +340,6 @@ SC02F:: Drag() ; v
 SC02C:: Drag("R") ; z
 SC02E:: Drag("M") ; c
 SC032:: JumpMiddle() ; m
-; SC033:: JumpMiddle2() ;! It is unclear why this is necessary.
-; SC034:: JumpMiddle3() ;! It is unclear why this is necessary.
 SC031:: MouseBrowserNavigate("forward") ; n
 SC030:: MouseBrowserNavigate("back") ; b
 ; TODO allow for modifier keys (or more importantly a lack of them) by lifting ctrl requirement for these hotkeys
@@ -350,7 +348,6 @@ SC030:: MouseBrowserNavigate("back") ; b
 *SC00B:: ScrollTo("down") ; 0
 SC01A:: ScrollTo("up") ; [
 SC01B:: ScrollTo("down") ; ]
-; End:: Click("Up") ;! What is this?
 
 #HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT && !INPUT_MODE.quick)
 Capslock:: EnterInsertMode(true)
@@ -358,7 +355,6 @@ Capslock:: EnterInsertMode(true)
 
 ;* Add Vim hotkeys that conflict with WASD mode
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_VIM)
-; <#<!r:: EnterWASDMode() ;! Conflicts with the recording mode of Windows game bar
 SC015:: ScrollTo("up") ; y
 SC012:: ScrollTo("down") ; e
 ; +SC01F:: DoubleClickInsert() ; shift + s ; TODO doesn't really work well?
@@ -366,8 +362,6 @@ SC012:: ScrollTo("down") ; e
 #HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT && INPUT_MODE.quick)
 Capslock:: return
 SC032:: JumpMiddle() ; m
-; ,:: JumpMiddle2() ;! It is unclear why this is necessary.
-; .:: JumpMiddle3() ;! It is unclear why this is necessary.
 
 ;* for windows explorer
 #HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT && WinActive("ahk_class CabinetWClass"))
@@ -391,7 +385,6 @@ Capslock:: EnterNormalMode()
 +Capslock:: EnterNormalMode()
 
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_WASD)
-; <#<!r:: ExitWASDMode() ;! Conflicts with the recording mode of Windows game bar
 ;* Intercept movement keys
 SC011:: return ; w
 SC01E:: return ; a
@@ -411,14 +404,3 @@ SC014:: EmulateMouseButton("R") ; t
 *SC015:: EmulateMouseButton("M") ; y
 *SC015 Up:: EmulateMouseButton("M") ; y
 ~BackSpace:: EnterInsertMode(true) ; passthrough for quick edits
-
-; #HotIf (DRAGGING) ;! It looks like broken code.
-; LButton:: ReleaseDrag(1)
-; MButton:: ReleaseDrag(2)
-; RButton:: ReleaseDrag(3)
-
-; TODO: "Marks" for remembering and restoring mouse positions (needs AwaitKey)
-; ?TODO: z for click and release middle mouse? this has historically not worked well
-; ?TODO: c guess that leaves c for hold / release right mouse (x is useful in chromium)
-;
-; Github issues and pull requests welcome
