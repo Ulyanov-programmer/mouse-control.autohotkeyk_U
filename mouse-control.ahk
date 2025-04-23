@@ -307,8 +307,8 @@ SC029:: ClickInsert(true) ; tilde, path to Quick Insert
 +SC027:: EnterInsertMode(true) ; the ; symbol with shift, do not pass through
 ; * commands
 SC039:: EmulateMouseButton()
-!SC039:: EmulateMouseButton("R") ; Alt + Space
-^SC039:: EmulateMouseButton("M") ; Ctrl + Space
++SC039:: EmulateMouseButton("R") ; Shift + Space
+!SC039:: EmulateMouseButton("M") ; Alt + Space
 +SC015:: Yank() ; shift + y, do not conflict with y as in  "scroll up"
 SC02E:: Drag("M") ; c
 SC032:: JumpMiddle() ; m
@@ -323,7 +323,7 @@ SC01B:: ScrollTo("down") ; ]
 
 ;* Add Vim hotkeys that conflict with WASD mode
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_VIM)
->+SC039:: EnterInsertMode() ; Right Shift + Space
+>^SC039:: EnterInsertMode() ; Right Shift + Space
 SC015:: ScrollTo("up") ; y
 SC012:: ScrollTo("down") ; e
 ; +SC01F:: DoubleClickInsert() ; shift + s ; TODO doesn't really work well?
@@ -345,8 +345,8 @@ SC026:: return ; l
 ^SC026:: Send("{ Right }") ; ctrl + l
 
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT && !INPUT_MODE.quick)
-<+SC039:: EnterNormalMode(, CONTROL_TYPE_NAME_WASD) ; Left Shift + Space
->+SC039:: EnterNormalMode() ; Right Shift + Space
+<^SC039:: EnterNormalMode(, CONTROL_TYPE_NAME_WASD) ; Left Shift + Space
+>^SC039:: EnterNormalMode() ; Right Shift + Space
 
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT && INPUT_MODE.quick)
 ~Enter:: EnterNormalMode()
@@ -354,7 +354,7 @@ SC026:: return ; l
 Escape:: EnterNormalMode()
 
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_WASD)
-<+SC039:: EnterInsertMode() ; Left Shift + Space
+<^SC039:: EnterInsertMode() ; Left Shift + Space
 ;* Intercept movement keys
 SC011:: return ; w
 SC01E:: return ; a
