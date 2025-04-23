@@ -171,13 +171,6 @@ Drag(mouseButton := "L") {
     DRAGGING := true
 }
 
-; ReleaseDrag(button) {
-;     Click("Middle Up")
-;     Click(button)
-
-;     DRAGGING := false
-; }
-
 Yank() {
     wx := 0, wy := 0, width := 0
     WinGetPos(&wx, &wy, &width, , "A")
@@ -188,15 +181,18 @@ Yank() {
 }
 
 EmulateMouseButton(button := "L") {
-    ; If the key is held down, should simulate holding down the mouse key. Otherwise, it's letting up.
-    if (InStr(A_ThisHotkey, "Up")) {
-        Click(button " Up")
-    }
-    else {
-        Click(button " Down")
+    global DRAGGING := false
+
+    if (button != "L") {
+        Click(button)
+        return
     }
 
-    global DRAGGING := false
+    Click(button " Down")
+
+    ; Waits until the key is released, then sends a signal to stop holding the key.
+    KeyWait(A_ThisHotkey)
+    Click(button " Up")
 }
 
 ; ; TODO: When we have more monitors, set up H and L to use current screen as basis
@@ -319,15 +315,10 @@ SC025:: return ; k
 SC026:: return ; l
 +SC026:: JumpToEdge("right")
 ; * commands
-*SC017:: EmulateMouseButton() ; i
-*SC017 Up:: EmulateMouseButton() ; i
-*SC018:: EmulateMouseButton("R") ; o
-*SC018 Up:: EmulateMouseButton("R") ; o
-*SC019:: EmulateMouseButton("M") ; p
-*SC019 Up:: EmulateMouseButton("M") ; p
+SC039:: EmulateMouseButton()
+!SC039:: EmulateMouseButton("R") ; Alt + Space
+^SC039:: EmulateMouseButton("M") ; Ctrl + Space
 +SC015:: Yank() ; shift + y, do not conflict with y as in  "scroll up"
-SC02F:: Drag() ; v
-SC02C:: Drag("R") ; z
 SC02E:: Drag("M") ; c
 SC032:: JumpMiddle() ; m
 SC031:: MouseBrowserNavigate("forward") ; n
@@ -341,7 +332,7 @@ SC01B:: ScrollTo("down") ; ]
 
 ;* Add Vim hotkeys that conflict with WASD mode
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_VIM)
->+Space:: EnterInsertMode()
+>+SC039:: EnterInsertMode() ; Right Shift + Space
 SC015:: ScrollTo("up") ; y
 SC012:: ScrollTo("down") ; e
 ; +SC01F:: DoubleClickInsert() ; shift + s ; TODO doesn't really work well?
@@ -354,11 +345,16 @@ SC012:: ScrollTo("down") ; e
 ^SC026:: Send("{ Right }") ; ctrl + l
 
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT && !INPUT_MODE.quick)
-<+Space:: EnterNormalMode(, CONTROL_TYPE_NAME_WASD)
->+Space:: EnterNormalMode()
+<+SC039:: EnterNormalMode(, CONTROL_TYPE_NAME_WASD) ; Left Shift + Space
+>+SC039:: EnterNormalMode() ; Right Shift + Space
+
+#HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT && INPUT_MODE.quick)
+~Enter:: EnterNormalMode()
+~^SC02E:: EnterNormalMode() ; ctrl + c, copy and return to Normal Mode
+Escape:: EnterNormalMode()
 
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_WASD)
-<+Space:: EnterInsertMode()
+<+SC039:: EnterInsertMode() ; Left Shift + Space
 ;* Intercept movement keys
 SC011:: return ; w
 SC01E:: return ; a
@@ -371,10 +367,8 @@ SC020:: return ; d
 +SC020:: JumpToEdge("right") ; shift + d
 SC012:: ScrollTo("down") ; e
 *SC010:: ScrollTo("up") ; q
-*SC013:: EmulateMouseButton() ; r
-*SC013 Up:: EmulateMouseButton() ; r
-SC014:: EmulateMouseButton("R") ; t
-*SC014 Up:: EmulateMouseButton("R") ; t
-*SC015:: EmulateMouseButton("M") ; y
-*SC015 Up:: EmulateMouseButton("M") ; y
+SC039:: EmulateMouseButton()
+!SC039:: EmulateMouseButton("R") ; Alt + Space
+^SC039:: EmulateMouseButton("M") ; Ctrl + Space
+SC02E:: Drag("M") ; c
 ~BackSpace:: EnterInsertMode(true) ; passthrough for quick edits
