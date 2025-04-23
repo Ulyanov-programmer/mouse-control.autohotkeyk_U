@@ -27,6 +27,10 @@ global VELOCITY_Y := 0
 global DRAGGING := false
 global DOUBLE_PRESS_ACTION_IS_ACTIVE := false
 
+CapsLock:: GetKeyState("CapsLock", "T")
+    ? SetCapsLockState("Off")
+    : SetCapsLockState("On")
+
 ; Insert Mode by default
 EnterInsertMode()
 
@@ -297,20 +301,6 @@ DoByDoublePress(callback, repeatFor := 1) {
     }
 }
 
-;* "FINAL" MODE SWITCH BINDINGS
-Home:: EnterNormalMode()
-Insert:: EnterInsertMode()
-<#<!n:: EnterNormalMode()
-<#<!i:: EnterInsertMode()
-
-;* escape hatches
-+Home:: Send("{Home}")
-+Insert:: Send("{Insert}")
-
-; TODO doesn't turn capslock off.
-^Capslock:: Send("{ Capslock }")
-^+Capslock:: SetCapsLockState("Off")
-
 #HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT)
 +SC029:: ClickInsert(false) ; shift + tilde, focus window and enter Insert
 SC029:: ClickInsert(true) ; tilde, path to Quick Insert
@@ -349,19 +339,12 @@ SC030:: MouseBrowserNavigate("back") ; b
 SC01A:: ScrollTo("up") ; [
 SC01B:: ScrollTo("down") ; ]
 
-#HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT && !INPUT_MODE.quick)
-Capslock:: EnterInsertMode(true)
-+Capslock:: EnterInsertMode()
-
 ;* Add Vim hotkeys that conflict with WASD mode
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_VIM)
+>+Space:: EnterInsertMode()
 SC015:: ScrollTo("up") ; y
 SC012:: ScrollTo("down") ; e
 ; +SC01F:: DoubleClickInsert() ; shift + s ; TODO doesn't really work well?
-
-#HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT && INPUT_MODE.quick)
-Capslock:: return
-SC032:: JumpMiddle() ; m
 
 ;* for windows explorer
 #HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT && WinActive("ahk_class CabinetWClass"))
@@ -371,20 +354,11 @@ SC032:: JumpMiddle() ; m
 ^SC026:: Send("{ Right }") ; ctrl + l
 
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT && !INPUT_MODE.quick)
-; TODO: this key activates only the mode for VIМ, need an option for WASD.
-Capslock:: EnterNormalMode(true)
-+Capslock:: EnterNormalMode()
 <+Space:: EnterNormalMode(, CONTROL_TYPE_NAME_WASD)
 >+Space:: EnterNormalMode()
 
-#HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT && INPUT_MODE.quick)
-~Enter:: EnterNormalMode()
-~^SC02E:: EnterNormalMode() ; ctrl + c, copy and return to Normal Mode
-Escape:: EnterNormalMode()
-Capslock:: EnterNormalMode()
-+Capslock:: EnterNormalMode()
-
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_WASD)
+<+Space:: EnterInsertMode()
 ;* Intercept movement keys
 SC011:: return ; w
 SC01E:: return ; a
