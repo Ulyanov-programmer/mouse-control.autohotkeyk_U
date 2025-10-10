@@ -8,6 +8,8 @@ InstallKeybdHook
 ; Astrid Ivy
 ; 2019-04-14
 
+Thread("Priority", 150)
+
 ; Use these constants to specify the input type.
 global CONTROL_TYPE_NAME_VIM := "vim"
 global CONTROL_TYPE_NAME_WASD := "wasd"
@@ -21,8 +23,7 @@ global INPUT_MODE := {
 global MOUSE_FORCE := 1.2
 global MOUSE_RESISTANCE := 0.892
 
-global VELOCITY_X := 0
-global VELOCITY_Y := 0
+global VELOCITY := { X: 0, Y: 0, }
 
 global DRAGGING := false
 global DOUBLE_PRESS_ACTION_IS_ACTIVE := false
@@ -52,12 +53,15 @@ MoveCursor() {
     LEFT := INPUT_MODE.type == CONTROL_TYPE_NAME_WASD
         ? 0 - GetKeyState("SC01E", "P")
             : 0 - GetKeyState("SC023", "P")
+
     DOWN := INPUT_MODE.type == CONTROL_TYPE_NAME_WASD
         ? 0 + GetKeyState("SC01F", "P")
             : 0 + GetKeyState("SC024", "P")
+
     UP := INPUT_MODE.type == CONTROL_TYPE_NAME_WASD
         ? 0 - GetKeyState("SC011", "P")
             : 0 - GetKeyState("SC025", "P")
+
     RIGHT := INPUT_MODE.type == CONTROL_TYPE_NAME_WASD
         ? 0 + GetKeyState("SC020", "P")
             : 0 + GetKeyState("SC026", "P")
@@ -72,30 +76,29 @@ MoveCursor() {
     }
 
     if (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT) {
-        global VELOCITY_X := 0
-        global VELOCITY_Y := 0
+        VELOCITY.X := 0
+        VELOCITY.Y := 0
 
         SetTimer(, 0)
     }
 
-    global VELOCITY_X := Accelerate(VELOCITY_X, LEFT, RIGHT)
-    global VELOCITY_Y := Accelerate(VELOCITY_Y, UP, DOWN)
+    VELOCITY.X := Accelerate(VELOCITY.X, LEFT, RIGHT)
+    VELOCITY.Y := Accelerate(VELOCITY.Y, UP, DOWN)
 
     ; enable per-monitor DPI awareness
     RestoreDPI := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
 
-    MouseMove(VELOCITY_X, VELOCITY_Y, 0, "R")
+    MouseMove(VELOCITY.X, VELOCITY.Y, 0, "R")
 
     ;(humble beginnings)
     ;MsgBox, %INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT%
     ;msg1 := "h " . LEFT . " j  " . DOWN . " k " . UP . " l " . RIGHT
     ;MsgBox, %msg1%
-    ;msg2 := "Moving " . VELOCITY_X . " " . VELOCITY_Y
+    ;msg2 := "Moving " . VELOCITY.X . " " . VELOCITY.Y
     ;MsgBox, %msg2%
 }
 
 EnterNormalMode(quick := false, mode := CONTROL_TYPE_NAME_VIM) {
-    ;
     if (INPUT_MODE.quick) {
         INPUT_MODE.type := previousInputType
     }
@@ -306,7 +309,7 @@ SC029:: ClickInsert(true) ; tilde, path to Quick Insert
 ~Delete:: EnterInsertMode(true) ; passthrough for quick edits
 +SC027:: EnterInsertMode(true) ; the ; symbol with shift, do not pass through
 ; * commands
-SC039:: EmulateMouseButton()
+SC039:: EmulateMouseButton() ; Space
 +SC039:: EmulateMouseButton("R") ; Shift + Space
 !SC039:: EmulateMouseButton("M") ; Alt + Space
 +SC015:: Yank() ; shift + y, do not conflict with y as in  "scroll up"
@@ -323,7 +326,7 @@ SC01B:: ScrollTo("down") ; ]
 
 ;* Add Vim hotkeys that conflict with WASD mode
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_VIM)
->^SC039:: EnterInsertMode() ; Right Shift + Space
+>^SC039:: EnterInsertMode() ; Right Alt + Space
 SC015:: ScrollTo("up") ; y
 SC012:: ScrollTo("down") ; e
 ; +SC01F:: DoubleClickInsert() ; shift + s ; TODO doesn't really work well?
@@ -345,8 +348,8 @@ SC026:: return ; l
 ^SC026:: Send("{ Right }") ; ctrl + l
 
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT && !INPUT_MODE.quick)
-<^SC039:: EnterNormalMode(, CONTROL_TYPE_NAME_WASD) ; Left Shift + Space
->^SC039:: EnterNormalMode() ; Right Shift + Space
+<^SC039:: EnterNormalMode(, CONTROL_TYPE_NAME_WASD) ; Left Alt + Space
+>^SC039:: EnterNormalMode() ; Right Alt + Space
 
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT && INPUT_MODE.quick)
 ~Enter:: EnterNormalMode()
@@ -354,7 +357,7 @@ SC026:: return ; l
 Escape:: EnterNormalMode()
 
 #HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_WASD)
-<^SC039:: EnterInsertMode() ; Left Shift + Space
+<^SC039:: EnterInsertMode() ; Left Alt + Space
 ;* Intercept movement keys
 SC011:: return ; w
 SC01E:: return ; a
