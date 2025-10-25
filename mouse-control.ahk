@@ -8,25 +8,47 @@ InstallKeybdHook
 ; Astrid Ivy
 ; 2019-04-14
 
+; ; TODO: When we have more monitors, set up H and L to use current screen as basis
+; ; hard to test when I only have the one
+
 Thread("Priority", 150)
 
-; Use these constants to specify the input type.
-global CONTROL_TYPE_NAME_VIM := "vim"
-global CONTROL_TYPE_NAME_WASD := "wasd"
-global CONTROL_TYPE_NAME_INSERT := "none"
+CONTROL_TYPES := {
+    VIM: {
+        UP: "SC025",
+        LEFT: "SC023",
+        DOWN: "SC024",
+        RIGHT: "SC026",
+        NAME: "VIM"
+    },
+    WASD: {
+        UP: "SC011",
+        LEFT: "SC01E",
+        DOWN: "SC01F",
+        RIGHT: "SC020",
+        NAME: "WASD"
+    },
+    NUMPAD: {
+        UP: "Numpad5",
+        LEFT: "Numpad1",
+        DOWN: "Numpad2",
+        RIGHT: "Numpad3",
+        NAME: "NUMPAD"
+    },
+}
 
-global INPUT_MODE := {
-    type: CONTROL_TYPE_NAME_INSERT,
+INPUT := {
+    modeName: "NUMPAD",
     quick: false,
 }
 
-global MOUSE_FORCE := 1.2
-global MOUSE_RESISTANCE := 0.892
+MOUSE_FORCE := 1.2
+MOUSE_RESISTANCE := 0.892
 
-global VELOCITY := { X: 0, Y: 0, }
+VELOCITY := { X: 0, Y: 0 }
 
-global DRAGGING := false
-global DOUBLE_PRESS_ACTION_IS_ACTIVE := false
+DRAGGING := false
+DOUBLE_PRESS_ACTION_IS_ACTIVE := false
 
 CapsLock:: GetKeyState("CapsLock", "T")
     ? SetCapsLockState("Off")
@@ -50,69 +72,53 @@ Accelerate(velocity, pos, neg) {
 }
 
 MoveCursor() {
-    LEFT := INPUT_MODE.type == CONTROL_TYPE_NAME_WASD
-        ? 0 - GetKeyState("SC01E", "P")
-            : 0 - GetKeyState("SC023", "P")
-
-    DOWN := INPUT_MODE.type == CONTROL_TYPE_NAME_WASD
-        ? 0 + GetKeyState("SC01F", "P")
-            : 0 + GetKeyState("SC024", "P")
-
-    UP := INPUT_MODE.type == CONTROL_TYPE_NAME_WASD
-        ? 0 - GetKeyState("SC011", "P")
-            : 0 - GetKeyState("SC025", "P")
-
-    RIGHT := INPUT_MODE.type == CONTROL_TYPE_NAME_WASD
-        ? 0 + GetKeyState("SC020", "P")
-            : 0 + GetKeyState("SC026", "P")
-
     if (
-        INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT &&
-        INPUT_MODE.quick &&
+        INPUT.modeName &&
+        INPUT.quick &&
         !GetKeyState("Capslock", "P")
     ) {
         ; If the fast mode is active, it switches back when release the key.
         EnterInsertMode()
     }
 
-    if (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT) {
-        VELOCITY.X := 0
-        VELOCITY.Y := 0
+    ; if (!INPUT.modeName) {
+    ;     VELOCITY.X := 0
+    ;     VELOCITY.Y := 0
 
-        SetTimer(, 0)
-    }
+    ;     SetTimer(, 0)
+    ; }
 
-    VELOCITY.X := Accelerate(VELOCITY.X, LEFT, RIGHT)
-    VELOCITY.Y := Accelerate(VELOCITY.Y, UP, DOWN)
+    VELOCITY.X := Accelerate(
+        VELOCITY.X,
+        0 - GetKeyState(CONTROL_TYPES.%INPUT.modeName%.LEFT, "P"),
+        0 + GetKeyState(CONTROL_TYPES.%INPUT.modeName%.RIGHT, "P")
+    )
+    VELOCITY.Y := Accelerate(
+        VELOCITY.Y,
+        0 - GetKeyState(CONTROL_TYPES.%INPUT.modeName%.UP, "P"),
+        0 + GetKeyState(CONTROL_TYPES.%INPUT.modeName%.DOWN, "P")
+    )
 
     ; enable per-monitor DPI awareness
     RestoreDPI := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
 
     MouseMove(VELOCITY.X, VELOCITY.Y, 0, "R")
-
-    ;(humble beginnings)
-    ;MsgBox, %INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT%
-    ;msg1 := "h " . LEFT . " j  " . DOWN . " k " . UP . " l " . RIGHT
-    ;MsgBox, %msg1%
-    ;msg2 := "Moving " . VELOCITY.X . " " . VELOCITY.Y
-    ;MsgBox, %msg2%
 }
 
-EnterNormalMode(quick := false, mode := CONTROL_TYPE_NAME_VIM) {
-    if (INPUT_MODE.quick) {
-        INPUT_MODE.type := previousInputType
+EnterNormalMode(quick := false, mode := "VIM") {
+    if (INPUT.quick) {
+        INPUT.modeName := previousInputType
     }
     else {
-        INPUT_MODE.type := mode
+        INPUT.modeName := mode
     }
 
-    INPUT_MODE.quick := quick
+    INPUT.quick := quick
     msg := "MOUSE"
 
-    msg := INPUT_MODE.type == CONTROL_TYPE_NAME_VIM
-        ? msg . " (VIM)" : msg . " (WASD)"
+    msg := msg . " (" . INPUT.modeName . ")"
 
-    msg := INPUT_MODE.quick
+    msg := INPUT.quick
         ? msg . " QUICK" : msg . ""
 
     ShowModePopup(msg)
@@ -125,11 +131,11 @@ EnterInsertMode(quick := false) {
     ShowModePopup(msg)
 
     if (quick) {
-        global previousInputType := INPUT_MODE.type
+        global previousInputType := INPUT.modeName
     }
 
-    INPUT_MODE.type := CONTROL_TYPE_NAME_INSERT
-    INPUT_MODE.quick := quick
+    INPUT.modeName := "NUMPAD"
+    INPUT.quick := quick
 }
 
 ClickInsert(quick := true) {
@@ -198,22 +204,19 @@ EmulateMouseButton(button := "L") {
     Click(button " Up")
 }
 
-; ; TODO: When we have more monitors, set up H and L to use current screen as basis
-; ; hard to test when I only have the one
-
 JumpMiddle() {
     CoordMode("Mouse", "Screen")
     MouseMove(A_ScreenWidth // 2, A_ScreenHeight // 2)
-}
 
-; JumpMiddle2() {
-;     CoordMode("Mouse", "Screen")
-;     MouseMove(A_ScreenWidth + A_ScreenWidth // 2, A_ScreenHeight // 2)
-; }
-; JumpMiddle3() {
-;     CoordMode("Mouse", "Screen")
-;     MouseMove(A_ScreenWidth * 2 + A_ScreenWidth // 2, A_ScreenHeight // 2)
-; }
+    ; JumpMiddle2() {
+    ;     CoordMode("Mouse", "Screen")
+    ;     MouseMove(A_ScreenWidth + A_ScreenWidth // 2, A_ScreenHeight // 2)
+    ; }
+    ; JumpMiddle3() {
+    ;     CoordMode("Mouse", "Screen")
+    ;     MouseMove(A_ScreenWidth * 2 + A_ScreenWidth // 2, A_ScreenHeight // 2)
+    ; }
+}
 
 GetMonitorLeftEdge() {
     mx := 0
@@ -300,7 +303,7 @@ DoByDoublePress(callback, repeatFor := 1) {
     }
 }
 
-#HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT)
+#HotIf (INPUT.modeName != "NUMPAD")
 +SC029:: ClickInsert(false) ; shift + tilde, focus window and enter Insert
 SC029:: ClickInsert(true) ; tilde, path to Quick Insert
 ~SC021:: EnterInsertMode(true) ; f, passthrough for Vimium hotlinks
@@ -325,7 +328,7 @@ SC01A:: ScrollTo("up") ; [
 SC01B:: ScrollTo("down") ; ]
 
 ;* Add Vim hotkeys that conflict with WASD mode
-#HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_VIM)
+#HotIf (INPUT.modeName == "VIM")
 >^SC039:: EnterInsertMode() ; Right Alt + Space
 SC015:: ScrollTo("up") ; y
 SC012:: ScrollTo("down") ; e
@@ -341,22 +344,22 @@ SC026:: return ; l
 +SC026:: JumpToEdge("right")
 
 ;* for windows explorer
-#HotIf (INPUT_MODE.type != CONTROL_TYPE_NAME_INSERT && WinActive("ahk_class CabinetWClass"))
+#HotIf (INPUT.modeName != "NUMPAD" && WinActive("ahk_class CabinetWClass"))
 ^SC023:: Send("{ Left }") ; ctrl + h
 ^SC024:: Send("{ Down }") ; ctrl + j
 ^SC025:: Send("{ Up }") ; ctrl + k
 ^SC026:: Send("{ Right }") ; ctrl + l
 
-#HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT && !INPUT_MODE.quick)
-<^SC039:: EnterNormalMode(, CONTROL_TYPE_NAME_WASD) ; Left Alt + Space
+#HotIf (INPUT.modeName == "NUMPAD" && !INPUT.quick)
+<^SC039:: EnterNormalMode(, "WASD") ; Left Alt + Space
 >^SC039:: EnterNormalMode() ; Right Alt + Space
 
-#HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_INSERT && INPUT_MODE.quick)
+#HotIf (INPUT.modeName == "NUMPAD" && INPUT.quick)
 ~Enter:: EnterNormalMode()
 ~^SC02E:: EnterNormalMode() ; ctrl + c, copy and return to Normal Mode
 Escape:: EnterNormalMode()
 
-#HotIf (INPUT_MODE.type == CONTROL_TYPE_NAME_WASD)
+#HotIf (INPUT.modeName == "WASD")
 <^SC039:: EnterInsertMode() ; Left Alt + Space
 ;* Intercept movement keys
 SC011:: return ; w
@@ -371,3 +374,14 @@ SC020:: return ; d
 SC012:: ScrollTo("down") ; e
 *SC010:: ScrollTo("up") ; q
 ~BackSpace:: EnterInsertMode(true) ; passthrough for quick edits
+
+;* NUMPAD, Intercept movement keys
+Numpad5:: return ; up
+Numpad1:: return ; left
+Numpad2:: return ; down
+Numpad3:: return ; right
+Numpad6:: ScrollTo("down")
+Numpad4:: ScrollTo("up")
+Numpad0:: EmulateMouseButton()
+NumpadEnter:: EmulateMouseButton("R")
+NumpadDot:: EmulateMouseButton("M")
